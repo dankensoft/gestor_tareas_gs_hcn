@@ -12,62 +12,88 @@ class TaskPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text("Gestión de Tareas")),
-      body: tasksAsync.when(
-        data: (tasks) {
-          if (tasks.isEmpty) {
-            return const Center(child: Text("No hay tareas registradas"));
-          }
-          return ListView.builder(
-            itemCount: tasks.length,
-            itemBuilder: (context, index) {
-              final task = tasks[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                child: ListTile(
-                  leading: Icon(
-                    _getStatusIcon(task.status),
-                    color: _getStatusColor(task.status),
-                  ),
-                  title: Text(task.title),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (task.description.isNotEmpty) Text(task.description),
-                      if (task.status == TaskStatus.failed &&
-                          task.failReason != null)
-                        Text(
-                          "Razón: ${task.failReason.toString().split('.').last}",
-                          style: const TextStyle(color: Colors.redAccent),
+      body: Column(
+        children: [
+          // Estadísticas rápidas
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: tasksAsync.when(
+              data: (tasks) {
+                final pending = tasks.where((t) => t.status == TaskStatus.pending).length;
+                final completed = tasks.where((t) => t.status == TaskStatus.completed).length;
+                final failed = tasks.where((t) => t.status == TaskStatus.failed).length;
+
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Chip(label: Text("Pendientes: $pending"), backgroundColor: Colors.orange.shade100),
+                    Chip(label: Text("Completadas: $completed"), backgroundColor: Colors.green.shade100),
+                    Chip(label: Text("Fallidas: $failed"), backgroundColor: Colors.red.shade100),
+                  ],
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+          ),
+
+          // Lista de tareas
+          Expanded(
+            child: tasksAsync.when(
+              data: (tasks) {
+                if (tasks.isEmpty) return const Center(child: Text("No hay tareas registradas"));
+                return ListView.builder(
+                  itemCount: tasks.length,
+                  itemBuilder: (context, index) {
+                    final task = tasks[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: ListTile(
+                        leading: Icon(
+                          _getStatusIcon(task.status),
+                          color: _getStatusColor(task.status),
                         ),
-                    ],
-                  ),
-                  trailing: PopupMenuButton<String>(
-                    onSelected: (value) {
-                      if (value == "completar") {
-                        ref
-                            .read(taskNotifierProvider.notifier)
-                            .updateTask(task.copyWith(status: TaskStatus.completed));
-                      } else if (value == "fallida") {
-                        _showFailReasonDialog(context, ref, task);
-                      } else if (value == "eliminar") {
-                        ref.read(taskNotifierProvider.notifier).deleteTask(task.id);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                          value: "completar", child: Text("Marcar como completada")),
-                      const PopupMenuItem(
-                          value: "fallida", child: Text("Marcar como fallida")),
-                      const PopupMenuItem(value: "eliminar", child: Text("Eliminar")),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, st) => Center(child: Text("Error: $err")),
+                        title: Text(task.title),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (task.description.isNotEmpty) Text(task.description),
+                            if (task.status == TaskStatus.failed && task.failReason != null)
+                              Text(
+                                "Razón: ${task.failReason.toString().split('.').last}",
+                                style: const TextStyle(color: Colors.redAccent),
+                              ),
+                          ],
+                        ),
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (value) {
+                            if (value == "completar") {
+                              ref.read(taskNotifierProvider.notifier).updateTask(
+                                  task.copyWith(status: TaskStatus.completed));
+                            } else if (value == "fallida") {
+                              _showFailReasonDialog(context, ref, task);
+                            } else if (value == "eliminar") {
+                              ref.read(taskNotifierProvider.notifier).deleteTask(task.id);
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                                value: "completar", child: Text("Marcar como completada")),
+                            const PopupMenuItem(
+                                value: "fallida", child: Text("Marcar como fallida")),
+                            const PopupMenuItem(value: "eliminar", child: Text("Eliminar")),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, st) => Center(child: Text("Error: $err")),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddTaskDialog(context, ref),
@@ -119,21 +145,20 @@ class TaskPage extends ConsumerWidget {
           ],
         ),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancelar")),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
           ElevatedButton(
-              onPressed: () {
-                if (titleController.text.isNotEmpty) {
-                  final newTask = Task(
-                    title: titleController.text,
-                    description: descController.text,
-                  );
-                  ref.read(taskNotifierProvider.notifier).addTask(newTask);
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text("Guardar")),
+            onPressed: () {
+              if (titleController.text.isNotEmpty) {
+                final newTask = Task(
+                  title: titleController.text,
+                  description: descController.text,
+                );
+                ref.read(taskNotifierProvider.notifier).addTask(newTask);
+                Navigator.pop(context);
+              }
+            },
+            child: const Text("Guardar"),
+          ),
         ],
       ),
     );
@@ -164,22 +189,21 @@ class TaskPage extends ConsumerWidget {
           },
         ),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancelar")),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
           ElevatedButton(
-              onPressed: () {
-                if (selectedReason != null) {
-                  ref.read(taskNotifierProvider.notifier).updateTask(
-                        task.copyWith(
-                          status: TaskStatus.failed,
-                          failReason: selectedReason,
-                        ),
-                      );
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text("Guardar")),
+            onPressed: () {
+              if (selectedReason != null) {
+                ref.read(taskNotifierProvider.notifier).updateTask(
+                      task.copyWith(
+                        status: TaskStatus.failed,
+                        failReason: selectedReason,
+                      ),
+                    );
+                Navigator.pop(context);
+              }
+            },
+            child: const Text("Guardar"),
+          ),
         ],
       ),
     );

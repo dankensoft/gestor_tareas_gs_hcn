@@ -1,29 +1,40 @@
-import 'dart:async';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../data/task_model.dart';
 
 class TaskRepository {
-  final List<Task> _tasks = [];
+  static const String keyTasks = 'tasks';
 
   Future<List<Task>> getAll() async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    return List.unmodifiable(_tasks);
+    final prefs = await SharedPreferences.getInstance();
+    final data = prefs.getStringList(keyTasks) ?? [];
+    return data.map((e) => Task.fromJson(jsonDecode(e))).toList();
   }
 
   Future<void> add(Task task) async {
-    await Future.delayed(const Duration(milliseconds: 100));
-    _tasks.add(task);
+    final prefs = await SharedPreferences.getInstance();
+    final tasks = await getAll();
+    tasks.add(task);
+    final data = tasks.map((t) => jsonEncode(t.toJson())).toList();
+    await prefs.setStringList(keyTasks, data);
   }
 
   Future<void> update(Task task) async {
-    await Future.delayed(const Duration(milliseconds: 100));
-    final index = _tasks.indexWhere((t) => t.id == task.id);
+    final prefs = await SharedPreferences.getInstance();
+    final tasks = await getAll();
+    final index = tasks.indexWhere((t) => t.id == task.id);
     if (index != -1) {
-      _tasks[index] = task;
+      tasks[index] = task;
     }
+    final data = tasks.map((t) => jsonEncode(t.toJson())).toList();
+    await prefs.setStringList(keyTasks, data);
   }
 
   Future<void> delete(String id) async {
-    await Future.delayed(const Duration(milliseconds: 100));
-    _tasks.removeWhere((t) => t.id == id);
+    final prefs = await SharedPreferences.getInstance();
+    final tasks = await getAll();
+    tasks.removeWhere((t) => t.id == id);
+    final data = tasks.map((t) => jsonEncode(t.toJson())).toList();
+    await prefs.setStringList(keyTasks, data);
   }
 }

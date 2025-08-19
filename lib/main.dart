@@ -14,9 +14,16 @@ class TodoApp extends StatelessWidget {
     return MaterialApp(
       title: 'Gestor de Tareas',
       debugShowCheckedModeBanner: false,
+      themeMode: ThemeMode.system,
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: Colors.indigo,
+        brightness: Brightness.light,
+      ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: Colors.indigo,
+        brightness: Brightness.dark,
       ),
       home: const TaskPage(),
     );

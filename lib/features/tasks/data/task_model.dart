@@ -36,4 +36,22 @@ class Task {
       failReason: failReason,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'description': description,
+        'status': status.index,
+        'failReason': failReason?.index,
+      };
+
+  factory Task.fromJson(Map<String, dynamic> json) => Task(
+        id: json['id'],
+        title: json['title'],
+        description: json['description'],
+        status: TaskStatus.values[json['status']],
+        failReason: json['failReason'] != null
+            ? FailReason.values[json['failReason']]
+            : null,
+      );
 }
